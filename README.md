@@ -236,9 +236,3 @@ Electrical Engineering, University of Wisconsin Madison (Class of 2028)
 - GitHub: [attahprince07](https://github.com/attahprince07)
 - LinkedIn: [amoah-prince](https://linkedin.com/in/amoah-prince)
 - Email: paamoah@wisc.edu
-
----
-
-## License
-
-MIT
