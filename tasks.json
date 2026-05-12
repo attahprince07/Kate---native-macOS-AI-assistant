@@ -1,0 +1,8 @@
+{
+  "tasks": [
+    { "id": 1, "text": "Review Strava interview prep notes", "done": false, "created": "2026-04-04" },
+    { "id": 2, "text": "Complete ECE signals and systems homework", "done": false, "created": "2026-04-04" },
+    { "id": 3, "text": "Morning workout — Push day", "done": false, "created": "2026-04-04" }
+  ],
+  "next_id": 4
+}

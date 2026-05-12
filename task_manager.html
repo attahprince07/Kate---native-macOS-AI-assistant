@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JARVIS — Task Manager</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: rgba(100, 200, 255, 0.12);
+    --border-bright: rgba(100, 200, 255, 0.35);
+    --accent: #4fc3f7;
+    --accent2: #00e5ff;
+    --text: #e8eaf0;
+    --text-muted: #6b7280;
+    --text-dim: #3d4452;
+    --done-color: #2d9e6b;
+    --danger: #ef5350;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* Scan line overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    position: relative;
+  }
+
+  .logo-icon::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(79, 195, 247, 0.2);
+    border-radius: 3px;
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    letter-spacing: 1px;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--done-color);
+    box-shadow: 0 0 8px var(--done-color);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .status-row {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 32px;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  /* Add task */
+  .add-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 40px;
+  }
+
+  .add-row input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 11px 16px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .add-row input::placeholder { color: var(--text-dim); }
+  .add-row input:focus { border-color: var(--border-bright); }
+
+  .add-btn {
+    background: var(--accent);
+    color: #0a0a0f;
+    border: none;
+    border-radius: 6px;
+    padding: 11px 22px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .add-btn:hover { opacity: 0.85; }
+  .add-btn:active { transform: scale(0.97); }
+
+  /* Stats bar */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+  }
+
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+
+  /* Task list */
+  .task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .task-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    transition: border-color 0.2s, opacity 0.3s;
+    animation: slideIn 0.25s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .task-item:hover { border-color: var(--border-bright); }
+  .task-item.done  { opacity: 0.45; }
+
+  .checkbox {
+    width: 20px; height: 20px;
+    min-width: 20px;
+    border: 1.5px solid var(--border-bright);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+    font-size: 11px;
+    color: transparent;
+  }
+
+  .task-item.done .checkbox {
+    background: var(--done-color);
+    border-color: var(--done-color);
+    color: #fff;
+  }
+
+  .task-text {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+
+  .task-item.done .task-text {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+
+  .task-date {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .delete-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .delete-btn:hover {
+    color: var(--danger);
+    background: rgba(239, 83, 80, 0.08);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 0;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 1px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+  }
+
+  /* Filter tabs */
+  .filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+
+  .filter-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    padding: 5px 14px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+
+  .filter-btn.active,
+  .filter-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .save-notice {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--done-color);
+    letter-spacing: 1px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    margin-left: auto;
+  }
+
+  .save-notice.visible { opacity: 1; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 20px 32px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 60px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">J</div>
+    <div>
+      <h1>JARVIS</h1>
+      <div class="subtitle">TASK COMMAND CENTER</div>
+    </div>
+  </div>
+  <div class="status-row">
+    <div class="status-dot"></div>
+    <span>SYSTEM ONLINE</span>
+  </div>
+</header>
+
+<main>
+  <div class="section-label">// new objective</div>
+  <div class="add-row">
+    <input type="text" id="new-task" placeholder="Add a task for today..." autocomplete="off" />
+    <button class="add-btn" onclick="addTask()">+ ADD</button>
+  </div>
+
+  <div class="stats" id="stats">
+    <div class="stat-card">
+      <div class="stat-num" id="stat-total">0</div>
+      <div class="stat-label">TOTAL</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-pending">0</div>
+      <div class="stat-label">PENDING</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-done">0</div>
+      <div class="stat-label">COMPLETED</div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; margin-bottom:20px;">
+    <div class="section-label" style="margin-bottom:0;">// mission log</div>
+    <div class="filters" style="margin:0 0 0 auto; gap:6px;">
+      <button class="filter-btn active" onclick="setFilter('all', this)">ALL</button>
+      <button class="filter-btn" onclick="setFilter('pending', this)">PENDING</button>
+      <button class="filter-btn" onclick="setFilter('done', this)">DONE</button>
+    </div>
+    <div class="save-notice" id="save-notice">✓ SAVED</div>
+  </div>
+
+  <div class="task-list" id="task-list"></div>
+</main>
+
+<footer>
+  <span>JARVIS v1.0 — LOCAL TASK SYSTEM</span>
+  <span id="footer-time"></span>
+</footer>
+
+<script>
+const STORAGE_KEY = 'jarvis_tasks';
+let filter = 'all';
+
+function loadTasks() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { tasks: [], next_id: 1 };
+  } catch {
+    return { tasks: [], next_id: 1 };
+  }
+}
+
+function saveTasks(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  const n = document.getElementById('save-notice');
+  n.classList.add('visible');
+  clearTimeout(n._t);
+  n._t = setTimeout(() => n.classList.remove('visible'), 1800);
+}
+
+function addTask() {
+  const input = document.getElementById('new-task');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const data = loadTasks();
+  const today = new Date().toISOString().split('T')[0];
+  data.tasks.push({ id: data.next_id++, text, done: false, created: today });
+  saveTasks(data);
+  input.value = '';
+  render();
+}
+
+function toggleTask(id) {
+  const data = loadTasks();
+  const t = data.tasks.find(t => t.id === id);
+  if (t) t.done = !t.done;
+  saveTasks(data);
+  render();
+}
+
+function deleteTask(id) {
+  const data = loadTasks();
+  data.tasks = data.tasks.filter(t => t.id !== id);
+  saveTasks(data);
+  render();
+}
+
+function setFilter(f, btn) {
+  filter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render() {
+  const data = loadTasks();
+  const tasks = data.tasks;
+
+  document.getElementById('stat-total').textContent   = tasks.length;
+  document.getElementById('stat-pending').textContent = tasks.filter(t => !t.done).length;
+  document.getElementById('stat-done').textContent    = tasks.filter(t => t.done).length;
+
+  const filtered = tasks.filter(t => {
+    if (filter === 'pending') return !t.done;
+    if (filter === 'done')    return t.done;
+    return true;
+  });
+
+  const list = document.getElementById('task-list');
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state">// NO TASKS IN THIS VIEW</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(t => `
+    <div class="task-item ${t.done ? 'done' : ''}">
+      <div class="checkbox" onclick="toggleTask(${t.id})">
+        ${t.done ? '✓' : ''}
+      </div>
+      <span class="task-text">${escHtml(t.text)}</span>
+      <span class="task-date">${t.created || ''}</span>
+      <button class="delete-btn" onclick="deleteTask(${t.id})" title="Delete">×</button>
+    </div>
+  `).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('footer-time').textContent =
+    now.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) + '  ' +
+    now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+}
+
+document.getElementById('new-task').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTask();
+});
+
+render();
+updateClock();
+setInterval(updateClock, 30000);
+</script>
+</body>
+</html>
